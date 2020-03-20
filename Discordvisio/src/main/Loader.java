@@ -12,6 +12,10 @@ import java.io.PrintStream;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -36,7 +40,8 @@ public class Loader {
 			    Date date;
 				try {
 					date = formatter.parse(donnees[0]);
-					
+					System.err.println(new Date(date.getTime()));
+
 				if(date.getTime()/1000 + Integer.parseInt(donnees[1])>System.currentTimeMillis()/1000) {
 					Visio visio = new Visio(date.getTime(), Integer.parseInt(donnees[1]), donnees[2], donnees[3], donnees[4]);
 					toReturn.add(visio);
