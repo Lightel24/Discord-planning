@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Scanner;
 import java.util.TimeZone;
 
 import javax.swing.JFrame;
@@ -35,172 +36,32 @@ import net.arikia.dev.drpc.DiscordRPC;
 import net.arikia.dev.drpc.DiscordRichPresence;
 
 public class Main {
-	
-    private static boolean ready = false;
-	private static ArrayList<Visio> visios;
-	private static Visio current;
+
 	Console console ;
+	Core core;
 		public static void main(String[] args) {
-			System.out.println(ZoneId.systemDefault().toString());
-			System.out.println(new Date(System.currentTimeMillis()));
-			
-			new Main();
+			if(args.length>=1) {
+				System.err.println("Ouverture par chrome");
+				Scanner sc = new Scanner(System.in);
+				while(true) {
+					System.err.println(sc.nextLine());
+				}
+			}else {
+				System.out.println(ZoneId.systemDefault().toString());
+				System.out.println(new Date(System.currentTimeMillis()));
+				new Main();
+			}
 	    }
 		
 		public Main() {
 			console = new Console();
 		    console.init();
-	        initDiscord();
-            load();
-            show();
+			core = new Core();
 	        System.out.println("Running callbacks...");
-	        while (true) {
-	            if(!ready)
-	                continue;
-
-		        if(current.getEndTimeStamp()<System.currentTimeMillis()/1000) {
-	            	visios.remove(current);
-	            	current = getNextVisio();
-	            	show();
-	            }else if(current.getStartTimeStamp()<System.currentTimeMillis()/1000) {
-	            	show();
-	            }
-	            try {
-					Thread.sleep(5000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-	        }
 		}
 		
-		private void execution() {
-			
-            String input = console.getCommand();
-            System.err.println(input);
-	            if (!input.equalsIgnoreCase("exit")){
-	            	switch(input.toLowerCase()){
-	            		case"test":
-	            			test();
-	            			break;
-	            		case"recharger":
-	            			load();
-	            			break;
-	            		case"actualiser":
-	            			show();
-	            			break;
-	            		case"aide":
-	            			help();
-	            			break;
-	            		case"planning":
-	            			planning();
-	            			break;
-	            		case"ajouter":
-	            			add();
-	            			break;
-	            		default:
-	            			System.out.println("\nCommande inconnue.\"Aide\" pour obtenir une liste des commandes.\n");
-	            	}
-	            } else {
-	                System.exit(0);
-	            }
-		}
 		
-	    private void add() {//TODO
-	    	System.out.println("\nFormat:	(retirer les espaces)	[UNINPLEMENTED]"); 
-	    	System.out.println("\ndd-M-yyyy hh:mm:ss; Duree(s) ; Matiere ; Chapitre ; Site(vous pouvez mettre n'imp)	\nExemple: ");
-	    	System.out.println("23-03-2020 08:00:00;7200;Maths;Espaces vectoriels;https://eu.bbcollab.com/collab/seesion/seesionid");
-			
-		}
-
-		private void planning() {
-			System.out.println("\nListe des visios chargées:\n");
-	    	for(Visio visio: visios) {
-	    		System.out.println(visio.toString()+"\n");
-			}
-			
-		}
-
-		private void help() {
-			System.out.println("\nAide! Voici la liste des commandes:\n-aide\n-test\n-recharger\n-actualiser\n-planning\n-ajouter");
-
-		}
-
-		private static void show() {
-			System.out.println("Actualisation de l'affichage");
-			if(current == null) {
-				 DiscordRPC.discordClearPresence();
-    			 DiscordRichPresence.Builder presence = new DiscordRichPresence.Builder("Pas de visio aujourd'hui");
-	             DiscordRPC.discordUpdatePresence(presence.build());
-			}else if(current.getStartTimeStamp()>System.currentTimeMillis()/1000) {
-	    		 if(isOtherVisioToday()) {
-	    			 DiscordRichPresence.Builder presence = new DiscordRichPresence.Builder(current.getChap());
-		    		 presence.setDetails("Visio suivante " + current.getCourse());
-		             presence.setEndTimestamp(current.getStartTimeStamp());
-		             DiscordRPC.discordUpdatePresence(presence.build());
-	    		 }else {
-	    			 DiscordRPC.discordClearPresence();
-	    			 DiscordRichPresence.Builder presence = new DiscordRichPresence.Builder("Pas de visio aujourd'hui");
-		             DiscordRPC.discordUpdatePresence(presence.build());
-	    		 }
-	    	 }else {
-		    	 DiscordRichPresence.Builder presence = new DiscordRichPresence.Builder(current.getChap());
-	    		 presence.setDetails(current.getCourse());
-	             presence.setEndTimestamp(current.getEndTimeStamp());
-	             presence.setSecrets("", current.getLink());
-	             DiscordRPC.discordUpdatePresence(presence.build());
-	    	 }
-		}
-
-		private static boolean isOtherVisioToday() {
-			Calendar date = new GregorianCalendar();
-			date.set(Calendar.HOUR_OF_DAY, 0);
-			date.set(Calendar.MINUTE, 0);
-			date.set(Calendar.SECOND, 0);
-			date.set(Calendar.MILLISECOND, 0);
-			//Demain
-			date.add(Calendar.DAY_OF_MONTH, 1);
-			Date demain = date.getTime();
-			
-			return (demain.compareTo(new Date(getNextVisio().getStartTimeStamp()*1000))>0);  //Si minuit suivant est après la prochaine visio, donc y en a  ajd	True			
-		}
-
-		private void load() {
-			System.out.println("Chargement");
-	    	visios = Loader.loadCsv();
-	    	current = getNextVisio();
-		}
-		
-		private static Visio getNextVisio() {
-			if(visios.size()!=0) {
-				Visio next =visios.get(0);
-				for (int i =1; i< visios.size();i++){
-					if(visios.get(i).getStartTimeStamp()<next.getStartTimeStamp()) {
-						next = visios.get(i);
-					}
-				}
-				return next;
-			}else {
-				System.out.println("\n\nIl n'y a plus de visios programmée.");
-				return null;
-			}
-		}
-
-		private void test() {
-			System.out.println("Affichage des données test");
-            DiscordRichPresence.Builder presence = new DiscordRichPresence.Builder("Thermo");
-             presence.setDetails("Physique");
-             presence.setEndTimestamp((System.currentTimeMillis() / 1000)+3600);
-             presence.setParty("0000000000000000", 20, 5);
-             DiscordRPC.discordUpdatePresence(presence.build());
-		}
-
-		private static void initDiscord() {
-			System.out.println("Initialisation ...");
-			DiscordEventHandlers handlers = new DiscordEventHandlers.Builder().build();
-	        DiscordRPC.discordInitialize("690156162259091459", handlers, false);
-	        DiscordRPC.discordRegister("690156162259091459", "");
-	        ready = true;
-	    }
+	  
 
 		class Console {
 			
@@ -224,7 +85,7 @@ public class Main {
 					public void keyPressed(KeyEvent arg0) {
 						if(arg0.getKeyCode() == KeyEvent.VK_ENTER && !textfield.getText().isEmpty()) {
 							textArea.append("> "+getCommand()+"\n");
-							execution();
+							core.execution(textfield.getText());
 							textfield.setText("");
 						}
 					}

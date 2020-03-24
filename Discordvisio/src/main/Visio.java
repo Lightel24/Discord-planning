@@ -9,6 +9,7 @@ public class Visio {
 	private String course;
 	private String chap;
 	private String link;
+	private boolean active = false;
 	
 
 	
@@ -43,6 +44,14 @@ public class Visio {
 	
 	public long getEndTimeStamp() {
 		return (date/1000)+duration;
+	}
+	
+	public void setActive(boolean active) {
+		this.active = active;
+	}
+	
+	public boolean isActive() {
+		return active;
 	}
 	
 	@Override
